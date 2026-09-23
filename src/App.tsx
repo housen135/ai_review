@@ -6,9 +6,11 @@ import { HomePage, DEFAULT_REVIEW_MODEL } from './components/HomePage';
 import type { ReviewModel } from './components/HomePage';
 import { TorchCupIntroPage } from './components/TorchCupIntroPage';
 import { ProjectListPage } from './components/ProjectListPage';
+import { ProjectListRail } from './components/ProjectListRail';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { AiReviewModal } from './components/AiReviewModal';
 import { UploadModal } from './components/UploadModal';
+import { useProjectListState } from './hooks/useProjectListState';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<CurrentView>('home');
@@ -17,7 +19,11 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [selectedCategory, setSelectedCategory] = useState<string>('新一代信息技术');
   const [selectedProject, setSelectedProject] = useState<Project | null>(INITIAL_PROJECTS[0]);
+  const [isListRailDocked, setIsListRailDocked] = useState(false);
   const [reviewModel, setReviewModel] = useState<ReviewModel>(DEFAULT_REVIEW_MODEL);
+
+  // 筛选 / 排序 / 分页:项目列表页与详情页左侧项目栏共用
+  const listState = useProjectListState(projects, selectedCategory);
 
   // Modal states
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -28,6 +34,8 @@ export default function App() {
   // Navigation handlers
   const handleNavigate = (view: CurrentView) => {
     setCurrentView(view);
+    // 离开详情页时收起左侧项目栏,回到独立的列表页
+    setIsListRailDocked(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -35,9 +43,17 @@ export default function App() {
     setSelectedCategory(cat);
   };
 
+  // 从项目列表进入详情:保留列表为左侧常驻栏,只切换右侧详情内容
   const handleSelectProject = (project: Project) => {
     setSelectedProject(project);
     setCurrentView('project-detail');
+    setIsListRailDocked(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // 左侧栏内切换项目:仅换详情内容,不改变栏的展开状态
+  const handleSelectProjectFromRail = (project: Project) => {
+    setSelectedProject(project);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -107,6 +123,7 @@ export default function App() {
           <ProjectListPage
             projects={projects}
             selectedCategory={selectedCategory}
+            listState={listState}
             onNavigate={handleNavigate}
             onSelectCategory={handleSelectCategory}
             onSelectProject={handleSelectProject}
@@ -115,11 +132,30 @@ export default function App() {
         )}
 
         {currentView === 'project-detail' && selectedProject && (
-          <ProjectDetailPage
-            project={selectedProject}
-            onNavigate={handleNavigate}
-            onUpdateProjectAiReview={handleUpdateProjectAiReview}
-          />
+          <>
+            {/* 从项目列表进入时,列表收窄为最左侧常驻栏 */}
+            {isListRailDocked && (
+              <ProjectListRail
+                projects={listState.paginatedProjects}
+                totalItems={listState.totalItems}
+                currentPage={listState.currentPage}
+                totalPages={listState.totalPages}
+                onPageChange={listState.setCurrentPage}
+                selectedProjectId={selectedProject.id}
+                onSelectProject={handleSelectProjectFromRail}
+              />
+            )}
+
+            {/* 左侧栏展开时,给详情内容让出等宽位置(移动端栏隐藏,不加偏移) */}
+            <div className={isListRailDocked ? 'lg:pl-56' : ''}>
+              <ProjectDetailPage
+                key={selectedProject.id}
+                project={selectedProject}
+                onNavigate={handleNavigate}
+                onUpdateProjectAiReview={handleUpdateProjectAiReview}
+              />
+            </div>
+          </>
         )}
       </main>
 

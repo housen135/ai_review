@@ -1,13 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { Project } from '../types/project';
 import { CurrentView } from '../types/navigation';
 import { ArrowLeft, Search, Filter, Download, Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { generateProjectsCSV } from '../data/torchCupProjects';
 import { TORCH_CUP_CATEGORIES, DEFAULT_CATEGORY } from '../data/torchCupCategories';
+import type { ProjectListState } from '../hooks/useProjectListState';
 
 interface Props {
   projects: Project[];
   selectedCategory: string;
+  /** 筛选 / 排序 / 分页状态由 App 持有,与详情页左侧项目栏共用 */
+  listState: ProjectListState;
   onNavigate: (view: CurrentView) => void;
   onSelectCategory: (category: string) => void;
   onSelectProject: (project: Project) => void;
@@ -17,64 +20,21 @@ interface Props {
 export const ProjectListPage: React.FC<Props> = ({
   projects,
   selectedCategory,
+  listState,
   onNavigate,
   onSelectCategory,
   onSelectProject,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [recommendFilter, setRecommendFilter] = useState<'all' | '是' | '否'>('all');
-  const [sortBy, setSortBy] = useState<'default' | 'score-desc' | 'score-asc'>('default');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Filter & Search Logic
-  const filteredProjects = useMemo(() => {
-    return projects.filter((item) => {
-      // Category match — 原样按赛道过滤，不再兜底放行其它赛道的项目
-      const matchCat = !selectedCategory || selectedCategory === '全部赛道' || item.category === selectedCategory;
-      if (!matchCat) return false;
-
-      // Recommendation filter
-      if (recommendFilter !== 'all' && item.isRecommended !== recommendFilter) {
-        return false;
-      }
-
-      // Search term
-      if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase();
-        const inName = item.projectName.toLowerCase().includes(q);
-        const inComp = item.companyName.toLowerCase().includes(q);
-        const inContact = item.contact.toLowerCase().includes(q);
-        const inKw = item.keywords.toLowerCase().includes(q);
-        const inRegion = item.region.toLowerCase().includes(q);
-        if (!inName && !inComp && !inContact && !inKw && !inRegion) {
-          return false;
-        }
-      }
-
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'score-desc') {
-        const sA = typeof a.avgScore === 'number' ? a.avgScore : parseFloat(a.avgScore) || 0;
-        const sB = typeof b.avgScore === 'number' ? b.avgScore : parseFloat(b.avgScore) || 0;
-        return sB - sA;
-      }
-      if (sortBy === 'score-asc') {
-        const sA = typeof a.avgScore === 'number' ? a.avgScore : parseFloat(a.avgScore) || 0;
-        const sB = typeof b.avgScore === 'number' ? b.avgScore : parseFloat(b.avgScore) || 0;
-        return sA - sB;
-      }
-      return 0;
-    });
-  }, [projects, selectedCategory, recommendFilter, searchTerm, sortBy]);
-
-  // Pagination calculation
-  const totalItems = filteredProjects.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const paginatedProjects = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredProjects.slice(start, start + pageSize);
-  }, [filteredProjects, currentPage, pageSize]);
+  const {
+    searchTerm, setSearchTerm,
+    recommendFilter, setRecommendFilter,
+    sortBy, setSortBy,
+    pageSize,
+    currentPage, setCurrentPage,
+    totalItems,
+    totalPages,
+    paginatedProjects,
+  } = listState;
 
   // Download CSV handler
   const handleExportCSV = () => {
@@ -146,10 +106,7 @@ export const ProjectListPage: React.FC<Props> = ({
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="搜索项目名称、企业名称、联系人..."
             className="w-full pl-9 pr-3 py-2 text-xs md:text-sm bg-slate-50 border border-slate-300 rounded-sm focus:outline-hidden focus:bg-white focus:border-slate-500 transition-colors"
           />
@@ -160,10 +117,7 @@ export const ProjectListPage: React.FC<Props> = ({
           {/* Segmented Filter Control */}
           <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-sm border border-slate-200 text-xs">
             <button
-              onClick={() => {
-                setRecommendFilter('all');
-                setCurrentPage(1);
-              }}
+              onClick={() => setRecommendFilter('all')}
               className={`px-3 py-1.5 font-medium rounded-2xs transition-colors cursor-pointer ${
                 recommendFilter === 'all'
                   ? 'bg-white text-slate-900 shadow-xs font-semibold'
@@ -173,10 +127,7 @@ export const ProjectListPage: React.FC<Props> = ({
               全部项目 ({projects.length})
             </button>
             <button
-              onClick={() => {
-                setRecommendFilter('是');
-                setCurrentPage(1);
-              }}
+              onClick={() => setRecommendFilter('是')}
               className={`px-3 py-1.5 font-medium rounded-2xs transition-colors cursor-pointer ${
                 recommendFilter === '是'
                   ? 'bg-emerald-700 text-white shadow-xs font-semibold'
@@ -186,10 +137,7 @@ export const ProjectListPage: React.FC<Props> = ({
               推荐项目 ({projects.filter((p) => p.isRecommended === '是').length})
             </button>
             <button
-              onClick={() => {
-                setRecommendFilter('否');
-                setCurrentPage(1);
-              }}
+              onClick={() => setRecommendFilter('否')}
               className={`px-3 py-1.5 font-medium rounded-2xs transition-colors cursor-pointer ${
                 recommendFilter === '否'
                   ? 'bg-slate-800 text-white shadow-xs font-semibold'
