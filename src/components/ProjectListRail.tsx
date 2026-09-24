@@ -1,96 +1,86 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import { Project } from '../types/project';
 
 interface Props {
-  /** 当前页的项目(与项目列表页同一批数据、同一个页码) */
+  /** 当前筛选条件下的**全部**项目(不分页) —— 窄栏要能滚,位置对齐才做得成 */
   projects: Project[];
-  totalItems: number;
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
   selectedProjectId: string;
+  /** 栏内切换项目:只换右侧详情,左栏保持折叠 */
   onSelectProject: (project: Project) => void;
+  /** 展开回完整的项目列表页 */
+  onExpand: () => void;
 }
 
 /**
- * 从项目列表进入详情时,列表页收窄成最左侧的常驻栏,只保留项目名称。
- * 点击名称切换右侧详情内容,不必退回列表页。
- * 栏内的翻页与列表页共用同一个页码状态 —— 在栏内翻到第 2 页,回到列表页也是第 2 页。
- * 窄屏(<lg)下隐藏:宽度不足以并排两栏,仍走「返回项目列表」的原有路径。
+ * 项目列表收窄后的形态:只保留项目名称,点击切换右侧详情,不必退回列表页。
+ *
+ * 本组件是 ProjectBrowser 里 <aside> 的**填充内容**,不自带定位:宽度与出现/消失
+ * 由外层那个始终存在的 <aside> 负责,才能得到连续的收窄动效。
+ *
+ * 这里显示筛选结果的全部而非当页:窄栏的滚动位置要能被 ProjectBrowser 调成
+ * 「点中的项目落在它原来那一行的高度上」,内容比容器矮就没得滚,对齐做不成。
+ *
+ * 窄屏下它整块隐藏,仍走「返回项目列表」的原有路径。
  */
 export const ProjectListRail: React.FC<Props> = ({
   projects,
-  totalItems,
-  currentPage,
-  totalPages,
-  onPageChange,
   selectedProjectId,
   onSelectProject,
+  onExpand,
 }) => {
   return (
-    <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-56 flex-col bg-white border-r border-slate-200 z-30">
-      <div className="px-4 py-4 border-b border-slate-200 shrink-0">
-        <h3 className="text-xs font-bold text-slate-900 tracking-tight">
-          项目列表
-        </h3>
-        <p className="text-[11px] text-slate-500 mt-0.5">
-          共 {totalItems} 个项目 · 点击切换
-        </p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto py-1.5">
-        {projects.length === 0 ? (
-          <p className="px-4 py-6 text-[11px] text-slate-400 leading-relaxed">
-            当前筛选条件下没有项目
+    <div className="flex flex-col h-full w-full">
+      <div className="px-4 py-4 border-b border-slate-200 shrink-0 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold text-slate-900 tracking-tight">
+            项目列表
+          </h3>
+          <p className="text-[11px] text-slate-500 mt-1">
+            共 {projects.length} 个项目
           </p>
-        ) : (
-          projects.map((project) => {
-            const isActive = project.id === selectedProjectId;
-            return (
-              <button
-                key={project.id}
-                onClick={() => onSelectProject(project)}
-                title={project.projectName}
-                className={`w-full text-left px-4 py-2.5 text-xs transition-colors cursor-pointer border-l-2 ${
-                  isActive
-                    ? 'border-l-blue-700 bg-blue-50 text-blue-700 font-bold'
-                    : 'border-l-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <span className="line-clamp-2 leading-snug">{project.projectName}</span>
-              </button>
-            );
-          })
-        )}
+        </div>
+        <button
+          onClick={onExpand}
+          title="展开完整列表"
+          className="shrink-0 p-1.5 rounded-sm border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+          <PanelLeft className="w-3.5 h-3.5" />
+        </button>
       </div>
 
-      {/* 翻页:驱动的是列表页共用的页码状态 */}
-      {totalPages > 1 && (
-        <div className="shrink-0 border-t border-slate-200 px-3 py-2 flex items-center justify-between gap-2">
-          <button
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage <= 1}
-            title="上一页"
-            className="p-1 rounded-sm border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-
-          <span className="text-[11px] font-mono text-slate-600 tabular-nums">
-            {currentPage} / {totalPages}
-          </span>
-
-          <button
-            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage >= totalPages}
-            title="下一页"
-            className="p-1 rounded-sm border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+      {/* ProjectBrowser 会在这个滚动容器上做位置对齐:读它的 scrollTop、
+         给内层写 paddingTop/paddingBottom。改动它之前先看 syncRailScroll */}
+      <div data-rail-scroll className="flex-1 min-h-0 overflow-y-auto px-3">
+        <div data-rail-inner className="py-3 space-y-2">
+          {projects.length === 0 ? (
+            <p className="px-1.5 py-6 text-[11px] text-slate-400 leading-relaxed">
+              当前筛选条件下没有项目
+            </p>
+          ) : (
+            projects.map((project) => {
+              const isActive = project.id === selectedProjectId;
+              return (
+                <button
+                  key={project.id}
+                  data-project-id={project.id}
+                  onClick={() => onSelectProject(project)}
+                  title={project.projectName}
+                  className={`w-full text-left px-3.5 py-3.5 rounded-sm border transition-colors cursor-pointer ${
+                    isActive
+                      ? 'border-blue-300 bg-blue-50 text-blue-800 font-bold shadow-xs'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  <span className="block text-xs line-clamp-2 leading-relaxed">
+                    {project.projectName}
+                  </span>
+                </button>
+              );
+            })
+          )}
         </div>
-      )}
-    </aside>
+      </div>
+    </div>
   );
 };

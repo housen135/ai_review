@@ -1,27 +1,25 @@
 import React from 'react';
 import { Project } from '../types/project';
-import { CurrentView } from '../types/navigation';
-import { ArrowLeft, Search, Filter, Download, Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
-import { generateProjectsCSV } from '../data/torchCupProjects';
-import { TORCH_CUP_CATEGORIES, DEFAULT_CATEGORY } from '../data/torchCupCategories';
+import { Search, Filter, Eye, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DEFAULT_CATEGORY } from '../data/torchCupCategories';
 import type { ProjectListState } from '../hooks/useProjectListState';
 
 interface Props {
   projects: Project[];
-  selectedCategory: string;
   /** 筛选 / 排序 / 分页状态由 App 持有,与详情页左侧项目栏共用 */
   listState: ProjectListState;
-  onNavigate: (view: CurrentView) => void;
   onSelectCategory: (category: string) => void;
   onSelectProject: (project: Project) => void;
-  onOpenAiReviewForProject?: (project: Project) => void;
 }
 
+/**
+ * 展开态的完整项目列表。
+ * 原本长在这里的顶栏(返回火炬杯概况 / 赛道类别 / 导出CSV)已经提到 ProjectBrowser,
+ * 展开态与折叠态共用同一根 —— 这里只管搜索、筛选、排序、表格和翻页。
+ */
 export const ProjectListPage: React.FC<Props> = ({
   projects,
-  selectedCategory,
   listState,
-  onNavigate,
   onSelectCategory,
   onSelectProject,
 }) => {
@@ -36,68 +34,8 @@ export const ProjectListPage: React.FC<Props> = ({
     paginatedProjects,
   } = listState;
 
-  // Download CSV handler
-  const handleExportCSV = () => {
-    const csvContent = generateProjectsCSV(projects);
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `第三届火炬杯_${selectedCategory || '新一代信息技术'}_项目数据清单.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Breadcrumb & Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => onNavigate('torch-intro')}
-            className="inline-flex items-center gap-1.5 text-xs md:text-sm font-medium text-slate-700 hover:text-blue-700 transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>返回火炬杯概况</span>
-          </button>
-          <span className="text-slate-300">|</span>
-          <div className="flex items-center gap-1.5 text-xs md:text-sm text-slate-500">
-            <span className="shrink-0">赛道类别：</span>
-            <div className="relative">
-              <select
-                value={selectedCategory || DEFAULT_CATEGORY}
-                onChange={(e) => {
-                  onSelectCategory(e.target.value);
-                  setCurrentPage(1);
-                }}
-                aria-label="赛道类别"
-                className="appearance-none font-bold text-slate-900 bg-slate-100 pl-2.5 pr-7 py-1 rounded-sm border border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-blue-500/40 cursor-pointer transition-colors"
-              >
-                {TORCH_CUP_CATEGORIES.map((cat) => (
-                  <option key={cat.name} value={cat.name}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons: Export CSV */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-slate-300 bg-white text-xs font-medium text-slate-800 hover:bg-slate-50 shadow-xs transition-colors cursor-pointer"
-            title="导出当前项目CSV数据"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>导出CSV数据</span>
-          </button>
-        </div>
-      </div>
-
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Control Bar: Search & Filters */}
       <div className="bg-white rounded-md p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Search Input */}
@@ -208,6 +146,7 @@ export const ProjectListPage: React.FC<Props> = ({
                   return (
                     <tr
                       key={item.id || idx}
+                      data-row-project-id={item.id}
                       className="hover:bg-slate-50 transition-colors"
                     >
                       {/* Index */}

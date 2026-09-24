@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
 import { Project, ProjectAiReview } from '../types/project';
-import { CurrentView } from '../types/navigation';
 import { parseCoreTeamMembers, generateDefaultAiReview } from '../data/torchCupProjects';
-import {
-  ArrowLeft, CheckCircle2, XCircle, Printer, RefreshCw
-} from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 interface Props {
   project: Project;
-  onNavigate: (view: CurrentView) => void;
   onUpdateProjectAiReview?: (projectId: string, review: ProjectAiReview) => void;
 }
 
+/**
+ * 项目详情。顶部原本有一条自己的信息卡(首页/项目列表面包屑、是否推荐、打印),
+ * 已经整条去掉 —— 那些收进了 ProjectBrowser 的共用顶栏,这里专心放内容。
+ */
 export const ProjectDetailPage: React.FC<Props> = ({
   project,
-  onNavigate,
   onUpdateProjectAiReview,
 }) => {
   // 左侧三大模块：项目详情 / 企业与团队 / 市场竞争与运营分析
@@ -52,7 +51,6 @@ export const ProjectDetailPage: React.FC<Props> = ({
   );
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
-  const isRec = project.isRecommended === '是';
   const parsedTeam = parseCoreTeamMembers(project.coreTeam);
 
   const handleRegenerateAi = () => {
@@ -67,82 +65,14 @@ export const ProjectDetailPage: React.FC<Props> = ({
     }, 600);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const avgScoreFormatted = typeof project.avgScore === 'number'
     ? project.avgScore.toFixed(2)
     : parseFloat(String(project.avgScore) || '0').toFixed(2);
 
   return (
-    /* lg 下整页锁定为一屏:3rem 是上层 <main> 的 pb-12。
-       高度由结构推导 —— 顶部信息卡 auto、网格 flex-1 —— 不再依赖对信息卡高度的估算 */
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 lg:h-[calc(100vh-3rem)]">
-      {/* Top Header: Breadcrumbs & "是否推荐" in the TOP RIGHT */}
-      <div className="bg-white rounded-md p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-        {/* Left: Breadcrumbs */}
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <button
-            onClick={() => onNavigate('home')}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-sm border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
-          >
-            <span>首页</span>
-          </button>
-          <span className="text-slate-300">/</span>
-          <button
-            onClick={() => onNavigate('project-list')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>项目列表</span>
-          </button>
-          <span className="text-slate-300">/</span>
-          <div className="text-xs text-slate-500">
-            <span className="hidden sm:inline">当前项目：</span>
-            <span className="font-bold text-slate-800">{project.projectName}</span>
-          </div>
-        </div>
-
-        {/* Top Right: "是否推荐展示在右上" */}
-        <div className="flex items-center gap-3 self-end md:self-auto">
-          {/* Print button */}
-          <button
-            onClick={handlePrint}
-            className="p-2 rounded-sm border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
-            title="打印或另存为PDF"
-          >
-            <Printer className="w-4 h-4" />
-          </button>
-
-          {/* Recommendation Status Badge */}
-          <div
-            className={`flex items-center gap-3 px-4 py-2 rounded-sm border shadow-xs transition-all ${
-              isRec
-                ? 'bg-emerald-50/70 border-emerald-300 text-emerald-800'
-                : 'bg-slate-50 border-slate-300 text-slate-700'
-            }`}
-          >
-            <div className="text-right">
-              <div className="text-xs sm:text-sm font-bold flex items-center gap-1 justify-end">
-                <span>是否推荐：</span>
-                <span className={`text-sm sm:text-base font-black ${isRec ? 'text-emerald-700' : 'text-slate-800'}`}>
-                  {project.isRecommended}
-                </span>
-              </div>
-            </div>
-
-            <div className="pl-0.5">
-              {isRec ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              ) : (
-                <XCircle className="w-5 h-5 text-slate-400" />
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
+    /* lg 下整页锁定为一屏,高度由 ProjectBrowser 的右列给出(h-full)→ 内容盒正好一屏。
+       顶部那条信息卡已经整条去掉,这里只剩一个网格,lg:flex-1 直接吃掉整屏 */
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 lg:h-full">
       {/* Main Grid:
           Left (col-span-7): 参赛项目详情信息 / 企业与团队介绍 / 市场竞争与运营分析 三个标签页
           Right (col-span-5): 上 AI智能评审、下 专家评审与打分

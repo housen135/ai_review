@@ -174,121 +174,123 @@ export const HomePage: React.FC<Props> = ({
       </div>
 
       {/* Four Big Buttons Section with Gradient Fills as explicitly requested:
-          图片用 蓝紫渐变，红橙渐变，绿黄渐变等填充，按钮标题分别是分别是 火炬杯大赛 春晖杯大赛 5213项目 科技项目
+          四张卡片的渐变色 —— 火炬杯 深红到鲜红、春晖杯 绿黄、5213 橙、科技项目 蓝到浅蓝。
+          文字用白色系,所以 from- 那一端(左上角)保持深色,保证白字的对比度;
+          卡片内的标签/序号/副标题/底部行的色阶跟着各自的色系走,不再各配一套。
           减少圆角使用 (rounded-md/sm)，去掉装饰性图标，风格大气
       */}
       <div className="w-full mt-4 mb-2">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* 1. 火炬杯大赛 (蓝紫渐变) -> Enters Page 2 */}
+          {/* 1. 火炬杯大赛 (深红到鲜红) -> Enters Page 2 */}
           <div
             onClick={() => onNavigate('torch-intro')}
-            className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-blue-700 via-indigo-700 to-purple-800 border border-blue-900/30 hover:opacity-95 transition-opacity"
+            className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-red-900 via-red-700 to-red-500 border border-red-950/40 hover:opacity-95 transition-opacity"
           >
             <div className="flex flex-col justify-between h-36">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-blue-200">
+                <span className="text-xs font-semibold text-red-100">
                   重点赛事专栏
                 </span>
-                <span className="text-xs text-blue-300 font-mono">01</span>
+                <span className="text-xs text-red-200 font-mono">01</span>
               </div>
 
               <div>
                 <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-1">
                   火炬杯大赛
                 </h3>
-                <p className="text-xs text-blue-100 line-clamp-1">
+                <p className="text-xs text-red-50 line-clamp-1">
                   新一代信息技术 · 7大赛道入库项目与专家打分
                 </p>
               </div>
 
-              <div className="text-xs font-semibold text-blue-200 flex items-center justify-between pt-2 border-t border-white/20">
+              <div className="text-xs font-semibold text-red-100 flex items-center justify-between pt-2 border-t border-white/20">
                 <span>进入赛事专区</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
             </div>
           </div>
 
-          {/* 2. 春晖杯大赛 (红橙渐变) */}
+          {/* 2. 春晖杯大赛 (绿黄渐变) */}
           <div
             onClick={() => setSelectedCompModal('春晖杯大赛')}
-            className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-rose-600 via-red-600 to-orange-500 border border-red-900/30 hover:opacity-95 transition-opacity"
+            className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-green-800 via-green-600 to-yellow-400 border border-green-900/30 hover:opacity-95 transition-opacity"
           >
             <div className="flex flex-col justify-between h-36">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-red-200">
+                <span className="text-xs font-semibold text-green-100">
                   留学人员创新
                 </span>
-                <span className="text-xs text-red-300 font-mono">02</span>
+                <span className="text-xs text-green-200 font-mono">02</span>
               </div>
 
               <div>
                 <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-1">
                   春晖杯大赛
                 </h3>
-                <p className="text-xs text-red-100 line-clamp-1">
+                <p className="text-xs text-green-50 line-clamp-1">
                   海外高层次留学人才创新创业与成果转化
                 </p>
               </div>
 
-              <div className="text-xs font-semibold text-red-200 flex items-center justify-between pt-2 border-t border-white/20">
+              <div className="text-xs font-semibold text-green-100 flex items-center justify-between pt-2 border-t border-white/20">
                 <span>查看赛事规则</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
             </div>
           </div>
 
-          {/* 3. 5213项目 (绿黄渐变) */}
+          {/* 3. 5213项目 (橙色渐变) */}
           <div
             onClick={() => setSelectedCompModal('5213项目')}
-            className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-teal-700 via-emerald-600 to-amber-500 border border-emerald-900/30 hover:opacity-95 transition-opacity"
+            className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-orange-700 via-orange-500 to-amber-400 border border-orange-900/30 hover:opacity-95 transition-opacity"
           >
             <div className="flex flex-col justify-between h-36">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-emerald-200">
+                <span className="text-xs font-semibold text-orange-100">
                   引智招才计划
                 </span>
-                <span className="text-xs text-emerald-300 font-mono">03</span>
+                <span className="text-xs text-orange-200 font-mono">03</span>
               </div>
 
               <div>
                 <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-1">
                   5213项目
                 </h3>
-                <p className="text-xs text-emerald-100 line-clamp-1">
+                <p className="text-xs text-orange-50 line-clamp-1">
                   高层次人才集聚与关键战略产业扶持
                 </p>
               </div>
 
-              <div className="text-xs font-semibold text-emerald-200 flex items-center justify-between pt-2 border-t border-white/20">
+              <div className="text-xs font-semibold text-orange-100 flex items-center justify-between pt-2 border-t border-white/20">
                 <span>查看申报指南</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
             </div>
           </div>
 
-          {/* 4. 科技项目 (深蓝金紫渐变) */}
+          {/* 4. 科技项目 (蓝到浅蓝渐变) */}
           <div
             onClick={() => setSelectedCompModal('科技项目')}
-            className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-indigo-700 via-blue-800 to-purple-800 border border-indigo-900/30 hover:opacity-95 transition-opacity"
+            className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-blue-700 via-blue-500 to-sky-300 border border-blue-900/30 hover:opacity-95 transition-opacity"
           >
             <div className="flex flex-col justify-between h-36">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-indigo-200">
+                <span className="text-xs font-semibold text-sky-100">
                   前沿战略攻关
                 </span>
-                <span className="text-xs text-indigo-300 font-mono">04</span>
+                <span className="text-xs text-sky-200 font-mono">04</span>
               </div>
 
               <div>
                 <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-1">
                   科技项目
                 </h3>
-                <p className="text-xs text-indigo-100 line-clamp-1">
+                <p className="text-xs text-sky-50 line-clamp-1">
                   重大专项攻关与新型工业化产业链布局
                 </p>
               </div>
 
-              <div className="text-xs font-semibold text-indigo-200 flex items-center justify-between pt-2 border-t border-white/20">
+              <div className="text-xs font-semibold text-sky-100 flex items-center justify-between pt-2 border-t border-white/20">
                 <span>浏览申报专项</span>
                 <ArrowRight className="w-4 h-4" />
               </div>

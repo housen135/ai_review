@@ -24,12 +24,41 @@
   background: #94a3b8;
 }
 
+/* 详情列从右侧滑入。该列只在左栏收起时挂载,所以动画每次展开恰好触发一次 */
+@keyframes browser-detail-in {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 尊重系统的「减弱动效」设置:整体压掉外壳的过渡与入场动画 */
+@media (prefers-reduced-motion: reduce) {
+  [data-browser-shell],
+  [data-browser-shell] * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+}
+
 @media print {
-  aside, button, nav {
+  aside, button, nav, [data-browser-topbar] {
     display: none !important;
   }
   main {
     margin-left: 0 !important;
     padding: 0 !important;
+  }
+  /* 列表/详情外壳在屏幕上锁一整屏高度并内部滚动,打印时必须解除,否则内容被裁掉 */
+  [data-browser-shell],
+  [data-browser-shell] * {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
