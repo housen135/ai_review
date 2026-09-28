@@ -2,16 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, ArrowRight } from 'lucide-react';
 import { CurrentView } from '../types/navigation';
 
+/** 评审模型按「项目类型」分,不再按单个赛事分 —— 火炬杯和春晖杯同属大赛类,合并成一项 */
 const REVIEW_MODELS = [
-  '火炬杯评审模型',
-  '春晖杯评审模型',
+  '大赛类项目评审模型',
   '人才类项目评审模型',
   '科技类项目评审模型',
 ] as const;
 
 export type ReviewModel = (typeof REVIEW_MODELS)[number];
 
-export const DEFAULT_REVIEW_MODEL: ReviewModel = '火炬杯评审模型';
+export const DEFAULT_REVIEW_MODEL: ReviewModel = '大赛类项目评审模型';
 
 interface Props {
   onNavigate: (view: CurrentView) => void;
@@ -210,9 +210,9 @@ export const HomePage: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* 2. 春晖杯大赛 (绿黄渐变) */}
+          {/* 2. 春晖杯大赛 (绿黄渐变) -> 进入春晖杯概况页 */}
           <div
-            onClick={() => setSelectedCompModal('春晖杯大赛')}
+            onClick={() => onNavigate('chunhui-intro')}
             className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-green-800 via-green-600 to-yellow-400 border border-green-900/30 hover:opacity-95 transition-opacity"
           >
             <div className="flex flex-col justify-between h-36">
@@ -233,7 +233,7 @@ export const HomePage: React.FC<Props> = ({
               </div>
 
               <div className="text-xs font-semibold text-green-100 flex items-center justify-between pt-2 border-t border-white/20">
-                <span>查看赛事规则</span>
+                <span>进入赛事专区</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
             </div>

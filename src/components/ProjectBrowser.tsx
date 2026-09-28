@@ -1,48 +1,54 @@
 import React, { useRef } from 'react';
-import { Project, ProjectAiReview } from '../types/project';
-import { CurrentView } from '../types/navigation';
-import { ProjectListPage } from './ProjectListPage';
-import { ProjectListRail } from './ProjectListRail';
-import { ProjectDetailPage } from './ProjectDetailPage';
-import { ProjectBrowserTopBar } from './ProjectBrowserTopBar';
-import type { ProjectListState } from '../hooks/useProjectListState';
+import { ProjectListRail, RailItem } from './ProjectListRail';
 
-interface Props {
-  /** 收起为左侧窄栏(详情已打开)。由 currentView 推导,不是独立 state */
+export interface ProjectBrowserProps {
+  /** 收起为左侧窄栏(详情已打开)。由调用方从 currentView 推导 */
   collapsed: boolean;
-  projects: Project[];
-  selectedCategory: string;
-  listState: ProjectListState;
-  selectedProject: Project | null;
-  onNavigate: (view: CurrentView) => void;
-  onSelectCategory: (category: string) => void;
-  onSelectProject: (project: Project) => void;
-  onSelectProjectFromRail: (project: Project) => void;
-  onUpdateProjectAiReview: (projectId: string, review: ProjectAiReview) => void;
+  /** 顶部工具栏整块由调用方给,外壳不关心里面是什么赛事 */
+  topBar?: React.ReactNode;
+  /** 收起后左栏列出的项目(只要 id + 名称) */
+  railItems: RailItem[];
+  /** 窄栏里高亮哪一个;留空则都不高亮 */
+  selectedProjectId?: string;
+  /**
+   * 展开态的整页内容。是个**渲染函数**而不是节点:外壳要把「点开详情」包一层
+   * (先做滚动对齐再切视图),所以得把包装后的回调交给它。
+   */
+  listView: (openDetail: (projectId: string) => void) => React.ReactNode;
+  /** 右侧详情。只在 collapsed 时挂载,挂载瞬间的幻灯片动画即展开动效 */
+  detailView?: React.ReactNode;
+  /** 展开回完整列表 */
+  onExpand: () => void;
+  /** 窄栏内换项目 */
+  onSelectFromRail: (projectId: string) => void;
+  /** 列表里点开详情 */
+  onOpenDetail: (projectId: string) => void;
 }
 
 /**
- * 项目列表与项目详情的共用外壳 —— 列表、详情、顶栏合成一个页面。
+ * 项目列表与项目详情的共用外壳 —— 两个赛事共用这一套折叠动效。
  *
- * 关键在于:App 只在这两个视图共用的一个分支里渲染本组件,所以 'project-list' 与
- * 'project-detail' 之间来回切换时本组件**不会卸载** —— <aside> 这个 DOM 节点始终存在,
+ * 关键在于:调用方只在「列表」与「详情」这两个视图共用的一个分支里渲染本组件,
+ * 所以两者之间来回切换时本组件**不会卸载** —— <aside> 这个 DOM 节点始终存在,
  * width 才能从 100% 连续过渡到 15rem。展开态与折叠态的两种内容在栏内**叠放**
- * (lg 下都是 absolute),各自只动 opacity,因此过渡途中不会因为「表格很高、窄栏很矮」
+ * (lg 下都是 absolute),各自只动 opacity,因此过渡途中不会因为「列表很高、窄栏很矮」
  * 而重排跳变。
  *
- * 窄屏(<lg)并排放不下两栏,退回原本的整页换页行为。
+ * 外壳不认识任何赛事的数据结构:列表页、详情页、顶栏都由调用方以插槽传入,
+ * 外壳只负责布局、宽度动画、以及「点中的项目落在它原来那一行的高度上」的滚动对齐。
+ *
+ * 窄屏(<lg)并排放不下两栏,退回整页换页行为。
  */
-export const ProjectBrowser: React.FC<Props> = ({
+export const ProjectBrowser: React.FC<ProjectBrowserProps> = ({
   collapsed,
-  projects,
-  selectedCategory,
-  listState,
-  selectedProject,
-  onNavigate,
-  onSelectCategory,
-  onSelectProject,
-  onSelectProjectFromRail,
-  onUpdateProjectAiReview,
+  topBar,
+  railItems,
+  selectedProjectId,
+  listView,
+  detailView,
+  onExpand,
+  onSelectFromRail,
+  onOpenDetail,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -92,14 +98,9 @@ export const ProjectBrowser: React.FC<Props> = ({
     container.scrollTop = delta;
   };
 
-  const handleSelectFromList = (project: Project) => {
-    syncRailScroll(project.id);
-    onSelectProject(project);
-  };
-
-  const handleChangeCategory = (category: string) => {
-    onSelectCategory(category);
-    listState.setCurrentPage(1);
+  const handleOpenDetail = (projectId: string) => {
+    syncRailScroll(projectId);
+    onOpenDetail(projectId);
   };
 
   return (
@@ -108,15 +109,7 @@ export const ProjectBrowser: React.FC<Props> = ({
       data-browser-shell
       className="lg:flex lg:flex-col lg:h-[calc(100vh-3rem)] lg:overflow-hidden"
     >
-      {/* 顶栏:展开态和折叠态共用同一根 */}
-      <ProjectBrowserTopBar
-        collapsed={collapsed}
-        projects={projects}
-        selectedCategory={selectedCategory}
-        selectedProject={selectedProject}
-        onNavigate={onNavigate}
-        onChangeCategory={handleChangeCategory}
-      />
+      {topBar}
 
       <div className="relative lg:flex lg:flex-1 lg:min-h-0 lg:overflow-hidden">
         {/* 左栏:展开态与折叠态共用同一个 <aside>,宽度连续过渡。
@@ -138,12 +131,7 @@ export const ProjectBrowser: React.FC<Props> = ({
                 : 'block lg:opacity-100'
             }`}
           >
-            <ProjectListPage
-              projects={projects}
-              listState={listState}
-              onSelectCategory={onSelectCategory}
-              onSelectProject={handleSelectFromList}
-            />
+            {listView(handleOpenDetail)}
           </div>
 
           {/* 折叠层:只留项目名。宽度在 lg 下**恒定 15rem** ——
@@ -157,10 +145,10 @@ export const ProjectBrowser: React.FC<Props> = ({
             }`}
           >
             <ProjectListRail
-              projects={listState.filteredProjects}
-              selectedProjectId={selectedProject?.id ?? ''}
-              onSelectProject={onSelectProjectFromRail}
-              onExpand={() => onNavigate('project-list')}
+              items={railItems}
+              selectedProjectId={selectedProjectId ?? ''}
+              onSelectProject={onSelectFromRail}
+              onExpand={onExpand}
             />
           </div>
         </aside>
@@ -169,17 +157,13 @@ export const ProjectBrowser: React.FC<Props> = ({
             宽度因此从头到尾恒为「整行 − 15rem」,不随左栏收窄而重排。
             换成 flex 兄弟节点的话,它的宽度会从 0 连续长到 1200px,内部跟着一路重排
             —— 而 lg:grid-cols-12 是按视口判断的,列只剩两三百像素时照样排 12 列,
-            过渡途中会看见「AI 智能评审」折行、「综合得分」竖着断字。
+            过渡途中会看见卡片标题折行、数字竖着断字。
             现在它始终是最终尺寸,只是被左栏盖住,左栏退开时像拉开一道帘子。
-            该列只在收起时挂载,但因为定位写死,挂载瞬间就是最终几何,依旧不重排。 */}
-        {collapsed && selectedProject && (
+            该列只在收起时挂载,但因为定位写死,挂载瞬间就是最终几何,依旧不重排。
+            需要在换项目时重置内部状态的,把 key 加在自己的详情组件上即可。 */}
+        {collapsed && detailView && (
           <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:left-60 lg:min-w-0 lg:overflow-hidden animate-[browser-detail-in_380ms_cubic-bezier(0.32,0.72,0,1)_160ms_both]">
-            {/* key 保住原有的语义:切换项目时重置该页的模块页签 / 市场页签 / AI 评审缓存 */}
-            <ProjectDetailPage
-              key={selectedProject.id}
-              project={selectedProject}
-              onUpdateProjectAiReview={onUpdateProjectAiReview}
-            />
+            {detailView}
           </div>
         )}
       </div>

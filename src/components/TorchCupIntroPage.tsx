@@ -6,7 +6,7 @@ import { TORCH_CUP_CATEGORIES, DEFAULT_CATEGORY } from '../data/torchCupCategori
 interface Props {
   onNavigate: (view: CurrentView) => void;
   onSelectCategory: (category: string) => void;
-  /** 跳转首页并选中火炬杯评审模型 */
+  /** 跳转首页并选中大赛类项目评审模型 */
   onLaunchReviewConsole: () => void;
   projectCount: number;
 }
@@ -53,9 +53,6 @@ export const TorchCupIntroPage: React.FC<Props> = ({
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight">
             第十五届中国创新创业大赛（浙江赛区）
           </h2>
-          <p className="text-lg md:text-xl text-blue-200 font-medium">
-            暨第十三届浙江省“火炬杯”创新创业大赛
-          </p>
         </div>
       </div>
 
@@ -72,22 +69,36 @@ export const TorchCupIntroPage: React.FC<Props> = ({
           大赛遵循政府引导、公益支持、市场助力原则，围绕发展高科技、实现产业化、加快形成新质生产力，搭建“政、产、学、研、用、金、服、城”多向对接交流平台，发现优质企业和团队，发掘源头创新与早期项目，促进科技成果转化，优化创新创业生态，服务产业基础再造和重大关键核心技术攻关，推动重点产业链高质量发展，支撑国家高新区、国家自创区建设，助力构建以科技创新为引领、以先进制造业为支撑的现代化产业体系，加快推进新型工业化和制造强国、网络强国建设。
         </p>
 
+        {/* 数字与单位分开写:数字用等宽 + tabular-nums 保证列对齐,
+            单位换回正文字体(等宽字体渲染中文又宽又怪)并缩小到约六成 */}
         <div className="grid grid-cols-2 md:grid-cols-4 md:divide-x divide-slate-200 gap-y-5 md:gap-y-0 mt-5 pt-4 border-t border-slate-100 bg-slate-50 rounded-sm border border-slate-200">
           <div className="px-2 py-5 text-center">
-            <span className="block text-3xl md:text-4xl font-bold font-mono text-slate-900 tabular-nums leading-none">551</span>
+            <span className="block text-3xl md:text-4xl font-bold text-slate-900 leading-none">
+              <span className="font-mono tabular-nums">13,115</span>
+              <span className="text-lg md:text-xl font-semibold ml-0.5">个</span>
+            </span>
             <span className="block text-sm text-slate-500 mt-3">总项目数量</span>
           </div>
           <div className="px-2 py-5 text-center">
-            <span className="block text-3xl md:text-4xl font-bold font-mono text-emerald-700 tabular-nums leading-none">100%</span>
-            <span className="block text-sm text-slate-500 mt-3">评审进度</span>
+            <span className="block text-3xl md:text-4xl font-bold text-emerald-700 leading-none">
+              <span className="font-mono tabular-nums">382</span>
+              <span className="text-lg md:text-xl font-semibold ml-0.5">亿</span>
+            </span>
+            <span className="block text-sm text-slate-500 mt-3">促成投融资金额</span>
           </div>
           <div className="px-2 py-5 text-center">
-            <span className="block text-3xl md:text-4xl font-bold font-mono text-blue-700 tabular-nums leading-none">152</span>
-            <span className="block text-sm text-slate-500 mt-3">推荐项目</span>
+            <span className="block text-3xl md:text-4xl font-bold text-blue-700 leading-none">
+              <span className="font-mono tabular-nums">1.98</span>
+              <span className="text-lg md:text-xl font-semibold ml-0.5">亿</span>
+            </span>
+            <span className="block text-sm text-slate-500 mt-3">发放奖金</span>
           </div>
           <div className="px-2 py-5 text-center">
-            <span className="block text-3xl md:text-4xl font-bold font-mono text-indigo-700 tabular-nums leading-none">78.77</span>
-            <span className="block text-sm text-slate-500 mt-3">项目均分</span>
+            <span className="block text-3xl md:text-4xl font-bold text-indigo-700 leading-none">
+              <span className="font-mono tabular-nums">100</span>
+              <span className="text-lg md:text-xl font-semibold ml-0.5">%</span>
+            </span>
+            <span className="block text-sm text-slate-500 mt-3">AI复盘</span>
           </div>
         </div>
       </div>
@@ -96,14 +107,29 @@ export const TorchCupIntroPage: React.FC<Props> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (8 cols): 项目浏览标签分类 */}
         <div className="lg:col-span-8">
-          {/* 第十三届火炬杯项目浏览 */}
+          {/* 第十五届火炬杯项目浏览 */}
           <div className="bg-white rounded-md p-6 border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-2">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-4 bg-indigo-700 rounded-2xs" />
                 <h3 className="text-lg font-bold text-slate-900 tracking-tight">
-                  第十三届火炬杯项目浏览
+                  第十五届火炬杯项目浏览
                 </h3>
+              </div>
+
+              {/* 靠右对齐;ml-auto 保证窄屏换行后仍贴右边而不是掉到左边 */}
+              <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                <span className="px-2 py-0.5 rounded-sm bg-indigo-50 text-indigo-700 font-medium border border-indigo-200">
+                  初赛
+                </span>
+                <span>
+                  评审进度{' '}
+                  <span className="font-mono font-bold text-emerald-700 tabular-nums">100%</span>
+                </span>
+                <span>
+                  推荐项目{' '}
+                  <span className="font-mono font-bold text-blue-700 tabular-nums">152</span>
+                </span>
               </div>
             </div>
 

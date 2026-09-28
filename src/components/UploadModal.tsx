@@ -1,14 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { Project } from '../types/project';
-import { X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, FileSpreadsheet, FolderOpen } from 'lucide-react';
 import { generateDefaultAiReview } from '../data/torchCupProjects';
+
+/** 用户为某一项选中的内容:可能是单个文件,也可能是整个文件夹 */
+type PickedSource = { kind: 'file' | 'folder'; name: string; files: File[] } | null;
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   initialType?: 'material' | 'list';
   onAddProject?: (project: Project) => void;
-  onImportProjects?: (projects: Project[]) => void;
   onTriggerAiReview?: (projectName: string, docText: string) => void;
 }
 
@@ -17,7 +19,6 @@ export const UploadModal: React.FC<Props> = ({
   onClose,
   initialType = 'material',
   onAddProject,
-  onImportProjects,
 }) => {
   if (!isOpen) return null;
 
@@ -36,6 +37,13 @@ export const UploadModal: React.FC<Props> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 「批量项目清单导入」要用户选两样东西:项目清单(csv/excel 文件或文件夹)、商业计划书文件夹
+  const [listSource, setListSource] = useState<PickedSource>(null);
+  const [planSource, setPlanSource] = useState<PickedSource>(null);
+  const listFileInputRef = useRef<HTMLInputElement>(null);
+  const listFolderInputRef = useRef<HTMLInputElement>(null);
+  const planFolderInputRef = useRef<HTMLInputElement>(null);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -43,155 +51,118 @@ export const UploadModal: React.FC<Props> = ({
     }
   };
 
-  const parseUploadedCSV = (text: string) => {
-    try {
-      const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-      if (lines.length < 2) {
-        throw new Error('CSV文件内容过少，需包含表头及至少一条数据');
-      }
+  /** 从 input 的 FileList 判断用户选的是文件还是文件夹 —— 目录选择会带上 webkitRelativePath */
+  const readPickedSource = (input: HTMLInputElement): PickedSource => {
+    const files = Array.from(input.files || []);
+    if (!files.length) return null;
+    const relPath = (files[0] as File & { webkitRelativePath?: string }).webkitRelativePath;
+    return relPath
+      ? { kind: 'folder', name: relPath.split('/')[0], files }
+      : { kind: 'file', name: files[0].name, files };
+  };
 
-      const newProjects: Project[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        const pattern = /(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)/g;
-        const matched: string[] = [];
-        let match;
-        while ((match = pattern.exec(line)) !== null) {
-          let val = match[1];
-          if (val.startsWith(',')) val = val.substring(1);
-          if (val.startsWith('"') && val.endsWith('"')) {
-            val = val.substring(1, val.length - 1).replace(/""/g, '"');
-          }
-          matched.push(val.trim());
-          if (matched.length >= 29) break;
-        }
+  const handleListPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = readPickedSource(e.target);
+    if (picked) {
+      setListSource(picked);
+      setUploadStatus('idle');
+      setStatusMessage('');
+    }
+    // 清空 value,否则连续选同一个文件/文件夹不会再触发 change
+    e.target.value = '';
+  };
 
-        if (matched.length >= 8 && matched[0]) {
-          const comp = matched[0] || '企业名称';
-          const proj = matched[7] || comp + '科技成果';
-          const isRec = (matched[28] === '是' ? '是' : '否') as '是' | '否';
-          const p: Project = {
-            id: `imported-${Date.now()}-${i}`,
-            companyName: comp,
-            coreTeam: matched[1] || '待补充',
-            contact: matched[2] || '项目申报人',
-            keywords: matched[3] || '高新技术',
-            region: matched[4] || '浙江省',
-            summary: matched[5] || '',
-            fundingStage: matched[6] || '天使轮',
-            projectName: proj,
-            projectIntro: matched[8] || '',
-            techInnovation: matched[9] || '',
-            techMaturity: matched[10] || '',
-            marketAnalysis: matched[11] || '',
-            topCustomers: matched[12] || '',
-            topSuppliers: matched[13] || '',
-            domesticRank: matched[14] || '行业前列',
-            marketShare: matched[15] || '',
-            domesticCompetitors: matched[16] || '',
-            intlCompetitors: matched[17] || '',
-            businessModel: matched[18] || '',
-            riskAndCountermeasure: matched[19] || '',
-            recommendReason: matched[20] || '通过自主导入审核',
-            judge1: matched[21] || 90,
-            judge2: matched[22] || 90,
-            judge3: matched[23] || 90,
-            avgScore: matched[24] || 90,
-            comment1: matched[25] || '符合立项标准',
-            comment2: matched[26] || '技术路线合理',
-            comment3: matched[27] || '具备产业化潜力',
-            isRecommended: isRec,
-            category: '新一代信息技术',
-          };
-          p.aiReview = generateDefaultAiReview(p);
-          newProjects.push(p);
-        }
-      }
+  const handlePlanPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = readPickedSource(e.target);
+    if (picked) {
+      setPlanSource(picked);
+      setUploadStatus('idle');
+      setStatusMessage('');
+    }
+    e.target.value = '';
+  };
 
-      if (newProjects.length === 0) {
-        throw new Error('未识别到有效的项目记录，请检查CSV格式');
-      }
-
-      if (onImportProjects) {
-        onImportProjects(newProjects);
-      }
-      setUploadStatus('success');
-      setStatusMessage(`成功解析并导入 ${newProjects.length} 个新项目！`);
-    } catch (err: any) {
-      setUploadStatus('error');
-      setStatusMessage(err.message || 'CSV解析失败，请检查文件格式');
+  /** webkitdirectory 不在 React 的类型定义里,只能挂到真实 DOM 上。
+      Chrome / Edge / Safari / Firefox 均支持这个目录选择属性 */
+  const attachFolderPicker = (
+    node: HTMLInputElement | null,
+    ref: React.RefObject<HTMLInputElement | null>
+  ) => {
+    ref.current = node;
+    if (node) {
+      node.setAttribute('webkitdirectory', '');
+      node.setAttribute('directory', '');
     }
   };
 
   const handleProcessUpload = () => {
+    // demo:这里不做真实的文件读取与解析,选好东西提交即可,回一个回执
     if (activeTab === 'list') {
-      if (!selectedFile) {
+      if (!listSource) {
         setUploadStatus('error');
-        setStatusMessage('请先选择待导入的CSV清单文件');
-        return;
-      }
-      setUploadStatus('parsing');
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        parseUploadedCSV(text);
-      };
-      reader.onerror = () => {
-        setUploadStatus('error');
-        setStatusMessage('文件读取错误');
-      };
-      reader.readAsText(selectedFile);
-    } else {
-      if (!projectName.trim() && !selectedFile) {
-        setUploadStatus('error');
-        setStatusMessage('请填写参赛项目名称或选择上传商业计划书/申报书文件');
+        setStatusMessage('请先选择项目清单（csv / excel 文件，或存放清单的文件夹）');
         return;
       }
       setUploadStatus('parsing');
       setTimeout(() => {
-        const newProj: Project = {
-          id: `custom-${Date.now()}`,
-          companyName: companyName.trim() || '申报企业',
-          coreTeam: '项目创始团队及研发专家组',
-          contact: contactName.trim() || '项目联系人',
-          keywords: '战略性新兴产业',
-          region: '重点科技园区',
-          summary: projectIntro.slice(0, 100) || '自主申报的高新技术重点攻关项目',
-          fundingStage: 'A轮',
-          projectName: projectName.trim() || (selectedFile ? selectedFile.name.replace(/\.[^/.]+$/, '') : '新型科技攻关成果'),
-          projectIntro: projectIntro || '项目专注于关键技术攻关与产业化落地，已形成首发样机并具备量产条件。',
-          techInnovation: techInnovation || '核心技术路线拥有完全自主知识产权，相较传统方案在效率、成本与安全性上有显著提升。',
-          techMaturity: '产品经过第三方实验室测试及环境适应性验证，技术就绪度达到工程化阶段。',
-          marketAnalysis: '面向千亿级战略新兴产业市场，下游标杆客户替代需求强烈。',
-          topCustomers: '战略合作伙伴3家，意向客户2家',
-          topSuppliers: '国内核心零部件供应商已建立长效采购协议',
-          domesticRank: '行业前列',
-          marketShare: '12',
-          domesticCompetitors: '国内少数同行处于原型验证阶段',
-          intlCompetitors: '对标欧美传统厂商，具备性价比与交付敏捷度优势',
-          businessModel: businessModel || '标准化产品销售与行业定制服务。',
-          riskAndCountermeasure: '已建立多地冗余供应链及自主知识产权防护体系。',
-          recommendReason: '技术方案扎实，团队执行力强，推荐优先立项。',
-          judge1: 91,
-          judge2: 89,
-          judge3: 92,
-          avgScore: 90.67,
-          comment1: '立项指标明确，符合国家战略性新兴产业导向。',
-          comment2: '核心自研技术壁垒突出，市场推广路线清晰。',
-          comment3: '具备产业落地实力与成熟供应链协同机制。',
-          isRecommended: '是',
-          category: '新一代信息技术',
-        };
-        newProj.aiReview = generateDefaultAiReview(newProj);
-
-        if (onAddProject) {
-          onAddProject(newProj);
-        }
-
         setUploadStatus('success');
-        setStatusMessage('申报材料已成功归档并生成专家级评测结果！');
-      }, 700);
+        setStatusMessage(
+          `已接收清单「${listSource.name}」` +
+            (listSource.kind === 'folder' ? `，共 ${listSource.files.length} 个文件` : '') +
+            (planSource ? `；商业计划书文件夹「${planSource.name}」` : '')
+        );
+      }, 600);
+      return;
     }
+    if (!projectName.trim() && !selectedFile) {
+      setUploadStatus('error');
+      setStatusMessage('请填写参赛项目名称或选择上传商业计划书/申报书文件');
+      return;
+    }
+    setUploadStatus('parsing');
+    setTimeout(() => {
+      const newProj: Project = {
+        id: `custom-${Date.now()}`,
+        companyName: companyName.trim() || '申报企业',
+        coreTeam: '项目创始团队及研发专家组',
+        contact: contactName.trim() || '项目联系人',
+        keywords: '战略性新兴产业',
+        region: '重点科技园区',
+        summary: projectIntro.slice(0, 100) || '自主申报的高新技术重点攻关项目',
+        fundingStage: 'A轮',
+        projectName: projectName.trim() || (selectedFile ? selectedFile.name.replace(/\.[^/.]+$/, '') : '新型科技攻关成果'),
+        projectIntro: projectIntro || '项目专注于关键技术攻关与产业化落地，已形成首发样机并具备量产条件。',
+        techInnovation: techInnovation || '核心技术路线拥有完全自主知识产权，相较传统方案在效率、成本与安全性上有显著提升。',
+        techMaturity: '产品经过第三方实验室测试及环境适应性验证，技术就绪度达到工程化阶段。',
+        marketAnalysis: '面向千亿级战略新兴产业市场，下游标杆客户替代需求强烈。',
+        topCustomers: '战略合作伙伴3家，意向客户2家',
+        topSuppliers: '国内核心零部件供应商已建立长效采购协议',
+        domesticRank: '行业前列',
+        marketShare: '12',
+        domesticCompetitors: '国内少数同行处于原型验证阶段',
+        intlCompetitors: '对标欧美传统厂商，具备性价比与交付敏捷度优势',
+        businessModel: businessModel || '标准化产品销售与行业定制服务。',
+        riskAndCountermeasure: '已建立多地冗余供应链及自主知识产权防护体系。',
+        recommendReason: '技术方案扎实，团队执行力强，推荐优先立项。',
+        judge1: 91,
+        judge2: 89,
+        judge3: 92,
+        avgScore: 90.67,
+        comment1: '立项指标明确，符合国家战略性新兴产业导向。',
+        comment2: '核心自研技术壁垒突出，市场推广路线清晰。',
+        comment3: '具备产业落地实力与成熟供应链协同机制。',
+        isRecommended: '是',
+        category: '新一代信息技术',
+      };
+      newProj.aiReview = generateDefaultAiReview(newProj);
+
+      if (onAddProject) {
+        onAddProject(newProj);
+      }
+
+      setUploadStatus('success');
+      setStatusMessage('申报材料已成功归档并生成专家级评测结果！');
+    }, 700);
   };
 
   return (
@@ -204,7 +175,7 @@ export const UploadModal: React.FC<Props> = ({
               资料上传与项目导入
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              支持商业计划书、立项申报书或批量CSV项目清单导入
+              支持商业计划书、立项申报书，或批量导入项目清单
             </p>
           </div>
 
@@ -242,7 +213,7 @@ export const UploadModal: React.FC<Props> = ({
                 : 'text-slate-700 bg-white border-slate-200 hover:bg-slate-50'
             }`}
           >
-            批量项目清单导入 (CSV格式)
+            批量项目清单导入
           </button>
         </div>
 
@@ -333,26 +304,92 @@ export const UploadModal: React.FC<Props> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-sm border border-slate-200 bg-slate-50 p-4 space-y-2 text-xs text-slate-700">
-              <span className="font-bold text-slate-900 block">CSV文件规范说明：</span>
-              <p>
-                请导入包含29列标准字段的火炬杯项目申报表（包含：企业名称、核心团队、联系人、项目名称、项目介绍、技术创新点、市场地位、专家打分、是否推荐等）。
-              </p>
+            {/* 1. 项目清单 */}
+            <div className="rounded-sm border border-slate-200 p-4 space-y-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="text-xs font-bold text-slate-800">
+                  1. 选择项目清单 <span className="text-red-500">*</span>
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  csv / excel 文件，或存放清单的文件夹
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => listFileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-slate-300 bg-white text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
+                  <span>选择文件</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => listFolderInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-slate-300 bg-white text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-slate-500" />
+                  <span>选择文件夹</span>
+                </button>
+
+                <span className="text-xs text-slate-500 min-w-0 truncate">
+                  {listSource
+                    ? `${listSource.kind === 'folder' ? '文件夹' : '文件'}：${listSource.name}` +
+                      (listSource.kind === 'folder' ? `（${listSource.files.length} 个文件）` : '')
+                    : '未选择'}
+                </span>
+              </div>
+
+              <input
+                ref={listFileInputRef}
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleListPick}
+                className="hidden"
+              />
+              <input
+                ref={(node) => attachFolderPicker(node, listFolderInputRef)}
+                type="file"
+                multiple
+                onChange={handleListPick}
+                className="hidden"
+              />
             </div>
 
-            <div className="border border-dashed border-slate-300 rounded-sm p-6 text-center space-y-2">
-              <label className="inline-block px-4 py-2 rounded-sm border border-slate-300 bg-white text-xs font-semibold text-slate-800 hover:bg-slate-50 cursor-pointer">
-                选择本地CSV文件
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </label>
-              <p className="text-xs text-slate-500">
-                {selectedFile ? `已选择: ${selectedFile.name}` : '未选择文件'}
-              </p>
+            {/* 2. 商业计划书文件夹 */}
+            <div className="rounded-sm border border-slate-200 p-4 space-y-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="text-xs font-bold text-slate-800">
+                  2. 选择项目商业计划书文件夹
+                </span>
+                <span className="text-[11px] text-slate-400">申报项目的资料文件夹</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => planFolderInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-slate-300 bg-white text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-slate-500" />
+                  <span>选择文件夹</span>
+                </button>
+
+                <span className="text-xs text-slate-500 min-w-0 truncate">
+                  {planSource
+                    ? `文件夹：${planSource.name}（${planSource.files.length} 个文件）`
+                    : '未选择'}
+                </span>
+              </div>
+
+              <input
+                ref={(node) => attachFolderPicker(node, planFolderInputRef)}
+                type="file"
+                multiple
+                onChange={handlePlanPick}
+                className="hidden"
+              />
             </div>
           </div>
         )}

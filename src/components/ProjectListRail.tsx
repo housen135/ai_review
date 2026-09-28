@@ -1,13 +1,17 @@
 import React from 'react';
 import { PanelLeft } from 'lucide-react';
-import { Project } from '../types/project';
+
+export interface RailItem {
+  id: string;
+  name: string;
+}
 
 interface Props {
-  /** 当前筛选条件下的**全部**项目(不分页) —— 窄栏要能滚,位置对齐才做得成 */
-  projects: Project[];
+  /** 当前筛选/搜索条件下的**全部**项目 —— 窄栏要能滚,位置对齐才做得成 */
+  items: RailItem[];
   selectedProjectId: string;
   /** 栏内切换项目:只换右侧详情,左栏保持折叠 */
-  onSelectProject: (project: Project) => void;
+  onSelectProject: (id: string) => void;
   /** 展开回完整的项目列表页 */
   onExpand: () => void;
 }
@@ -18,13 +22,14 @@ interface Props {
  * 本组件是 ProjectBrowser 里 <aside> 的**填充内容**,不自带定位:宽度与出现/消失
  * 由外层那个始终存在的 <aside> 负责,才能得到连续的收窄动效。
  *
+ * 只认 { id, name },不认具体赛事的数据结构 —— 火炬杯和春晖杯共用。
  * 这里显示筛选结果的全部而非当页:窄栏的滚动位置要能被 ProjectBrowser 调成
  * 「点中的项目落在它原来那一行的高度上」,内容比容器矮就没得滚,对齐做不成。
  *
- * 窄屏下它整块隐藏,仍走「返回项目列表」的原有路径。
+ * 窄屏下它整块隐藏,仍走「展开列表」的原有路径。
  */
 export const ProjectListRail: React.FC<Props> = ({
-  projects,
+  items,
   selectedProjectId,
   onSelectProject,
   onExpand,
@@ -37,7 +42,7 @@ export const ProjectListRail: React.FC<Props> = ({
             项目列表
           </h3>
           <p className="text-[11px] text-slate-500 mt-1">
-            共 {projects.length} 个项目
+            共 {items.length} 个项目
           </p>
         </div>
         <button
@@ -50,22 +55,22 @@ export const ProjectListRail: React.FC<Props> = ({
       </div>
 
       {/* ProjectBrowser 会在这个滚动容器上做位置对齐:读它的 scrollTop、
-         给内层写 paddingTop/paddingBottom。改动它之前先看 syncRailScroll */}
+          给内层写 paddingTop/paddingBottom。改动它之前先看 syncRailScroll */}
       <div data-rail-scroll className="flex-1 min-h-0 overflow-y-auto px-3">
         <div data-rail-inner className="py-3 space-y-2">
-          {projects.length === 0 ? (
+          {items.length === 0 ? (
             <p className="px-1.5 py-6 text-[11px] text-slate-400 leading-relaxed">
-              当前筛选条件下没有项目
+              当前条件下没有项目
             </p>
           ) : (
-            projects.map((project) => {
-              const isActive = project.id === selectedProjectId;
+            items.map((item) => {
+              const isActive = item.id === selectedProjectId;
               return (
                 <button
-                  key={project.id}
-                  data-project-id={project.id}
-                  onClick={() => onSelectProject(project)}
-                  title={project.projectName}
+                  key={item.id}
+                  data-project-id={item.id}
+                  onClick={() => onSelectProject(item.id)}
+                  title={item.name}
                   className={`w-full text-left px-3.5 py-3.5 rounded-sm border transition-colors cursor-pointer ${
                     isActive
                       ? 'border-blue-300 bg-blue-50 text-blue-800 font-bold shadow-xs'
@@ -73,7 +78,7 @@ export const ProjectListRail: React.FC<Props> = ({
                   }`}
                 >
                   <span className="block text-xs line-clamp-2 leading-relaxed">
-                    {project.projectName}
+                    {item.name}
                   </span>
                 </button>
               );
