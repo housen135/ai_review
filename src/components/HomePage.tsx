@@ -239,9 +239,9 @@ export const HomePage: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* 3. 5213项目 (橙色渐变) */}
+          {/* 3. 西湖英才 (橙色渐变) -> 进入申报介绍页 */}
           <div
-            onClick={() => setSelectedCompModal('5213项目')}
+            onClick={() => onNavigate('xihu-intro')}
             className="rounded-md p-6 text-white cursor-pointer bg-gradient-to-br from-orange-700 via-orange-500 to-amber-400 border border-orange-900/30 hover:opacity-95 transition-opacity"
           >
             <div className="flex flex-col justify-between h-36">
@@ -254,7 +254,7 @@ export const HomePage: React.FC<Props> = ({
 
               <div>
                 <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-1">
-                  5213项目
+                  西湖英才
                 </h3>
                 <p className="text-xs text-orange-50 line-clamp-1">
                   高层次人才集聚与关键战略产业扶持

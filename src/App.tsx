@@ -6,6 +6,10 @@ import { HomePage, DEFAULT_REVIEW_MODEL } from './components/HomePage';
 import type { ReviewModel } from './components/HomePage';
 import { TorchCupIntroPage } from './components/TorchCupIntroPage';
 import { ChunHuiIntroPage } from './components/ChunHuiIntroPage';
+import { XihuIntroPage } from './components/XihuIntroPage';
+import { XihuListPage } from './components/XihuListPage';
+import { XihuDetailPage } from './components/XihuDetailPage';
+import { XihuBrowserTopBar } from './components/XihuBrowserTopBar';
 import { ChunHuiListPage } from './components/ChunHuiListPage';
 import { ChunHuiDetailPage } from './components/ChunHuiDetailPage';
 import { ProjectBrowser } from './components/ProjectBrowser';
@@ -17,7 +21,9 @@ import { AiReviewModal } from './components/AiReviewModal';
 import { UploadModal } from './components/UploadModal';
 import { useProjectListState } from './hooks/useProjectListState';
 import { useChunHuiListState } from './hooks/useChunHuiListState';
+import { useXihuListState, XIHU_ALL_GROUPS } from './hooks/useXihuListState';
 import { CHUNHUI_DETAIL_SAMPLE } from './data/chunhuiProjects';
+import { XIHU_PROJECTS } from './data/xihuProjects';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<CurrentView>('home');
@@ -33,6 +39,14 @@ export default function App() {
 
   // 春晖杯的搜索 / 排序:列表页与它的左侧项目栏共用(不分页、不筛选)
   const chunHuiListState = useChunHuiListState();
+
+  // 西湖英才的搜索 / 分组 / 排序:同上
+  // 分组由 App 持有 —— 概览页的分组卡片要能把列表直接切到某一组,那个入口在列表页之外
+  const [xihuGroup, setXihuGroup] = useState<string>(XIHU_ALL_GROUPS);
+  const xihuListState = useXihuListState(xihuGroup, setXihuGroup);
+  const [selectedXihuId, setSelectedXihuId] = useState<string>(XIHU_PROJECTS[0].id);
+  // 从全量里取,不受搜索影响 —— 搜索后选中项掉出结果也不该让详情空掉
+  const selectedXihuProject = XIHU_PROJECTS.find((p) => p.id === selectedXihuId) ?? null;
 
   // Modal states
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -74,6 +88,20 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // 西湖英才:列表与窄栏都走这一个入口
+  const handleOpenXihuDetail = (projectId: string) => {
+    setSelectedXihuId(projectId);
+    setCurrentView('xihu-detail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // 概览页的分组卡片:切到该分组并进列表
+  const handleSelectXihuGroup = (group: string) => {
+    setXihuGroup(group);
+    setCurrentView('xihu-list');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleOpenUpload = (type: 'material' | 'list' = 'material') => {
     setUploadType(type);
     setIsUploadOpen(true);
@@ -88,9 +116,10 @@ export default function App() {
     setIsAiReviewOpen(true);
   };
 
-  // 「启动AI评审控制台」:回到首页,并选中大赛类项目评审模型
-  const handleLaunchReviewConsole = () => {
-    setReviewModel(DEFAULT_REVIEW_MODEL);
+  // 「启动AI评审控制台」:回到首页并选中对应类型的评审模型
+  // (火炬杯/春晖杯是大赛类,西湖英才是人才类 —— 由调用方指定,默认大赛类)
+  const handleLaunchReviewConsole = (model: ReviewModel = DEFAULT_REVIEW_MODEL) => {
+    setReviewModel(model);
     handleNavigate('home');
   };
 
@@ -120,6 +149,40 @@ export default function App() {
             onOpenAiReview={(query) => handleOpenAiReview(selectedProject)}
             reviewModel={reviewModel}
             onSelectReviewModel={setReviewModel}
+          />
+        )}
+
+        {currentView === 'xihu-intro' && (
+          <XihuIntroPage
+            onNavigate={handleNavigate}
+            onLaunchReviewConsole={() => handleLaunchReviewConsole('人才类项目评审模型')}
+            onSelectGroup={handleSelectXihuGroup}
+          />
+        )}
+
+        {/* 西湖英才:与火炬杯/春晖杯共用同一个 ProjectBrowser 外壳 */}
+        {(currentView === 'xihu-list' || currentView === 'xihu-detail') && (
+          <ProjectBrowser
+            collapsed={currentView === 'xihu-detail'}
+            topBar={
+              <XihuBrowserTopBar
+                onNavigate={handleNavigate}
+                count={xihuListState.filteredProjects.length}
+              />
+            }
+            railItems={xihuListState.filteredProjects.map((p) => ({ id: p.id, name: p.name }))}
+            selectedProjectId={selectedXihuProject?.id}
+            onExpand={() => handleNavigate('xihu-list')}
+            onSelectFromRail={(id) => handleOpenXihuDetail(id)}
+            onOpenDetail={(id) => handleOpenXihuDetail(id)}
+            listView={(openDetail) => (
+              <XihuListPage listState={xihuListState} onSelectProject={openDetail} />
+            )}
+            detailView={
+              selectedXihuProject ? (
+                <XihuDetailPage key={selectedXihuProject.id} project={selectedXihuProject} />
+              ) : null
+            }
           />
         )}
 
